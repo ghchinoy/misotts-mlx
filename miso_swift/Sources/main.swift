@@ -25,24 +25,41 @@ func main() {
     // 2. Load Safetensors Weights Native Validation
     print("\n2. Verifying Native Compatibility with converted MisoTTS Weights...")
     
-    // Resolve relative path to our converted weights folder
-    let currentDir = FileManager.default.currentDirectoryPath
-    let weightsPath = URL(fileURLWithPath: currentDir)
-        .appendingPathComponent("miso_mlx")
-        .appendingPathComponent("mlx_weights")
-        .appendingPathComponent("quantized_model_4bit.safetensors")
+    // Resolve relative path to our converted weights folder.
+    // We first attempt to find the project root relative to this source file (#filePath),
+    // which is highly reliable when running from Xcode, then fall back to the current directory.
+    let sourceFile = #filePath
+    let sourceURL = URL(fileURLWithPath: sourceFile)
+    let projectRoot = sourceURL
+        .deletingLastPathComponent() // Sources/
+        .deletingLastPathComponent() // miso_swift/
+        .deletingLastPathComponent() // misotts/ (project root)
     
-    let unquantizedPath = URL(fileURLWithPath: currentDir)
-        .appendingPathComponent("miso_mlx")
-        .appendingPathComponent("mlx_weights")
-        .appendingPathComponent("model.safetensors")
-        
+    let currentDir = FileManager.default.currentDirectoryPath
+    let currentDirURL = URL(fileURLWithPath: currentDir)
+    
+    // Define candidate search directories for weights
+    let searchDirs = [
+        projectRoot.appendingPathComponent("miso_mlx").appendingPathComponent("mlx_weights"),
+        currentDirURL.appendingPathComponent("miso_mlx").appendingPathComponent("mlx_weights"),
+        currentDirURL.appendingPathComponent("mlx_weights")
+    ]
+    
     var selectedPath: URL? = nil
-    if FileManager.default.fileExists(atPath: weightsPath.path) {
-        selectedPath = weightsPath
-    } else if FileManager.default.fileExists(atPath: unquantizedPath.path) {
-        selectedPath = unquantizedPath
+    
+    for dir in searchDirs {
+        let quantized = dir.appendingPathComponent("quantized_model_4bit.safetensors")
+        let unquantized = dir.appendingPathComponent("model.safetensors")
+        
+        if FileManager.default.fileExists(atPath: quantized.path) {
+            selectedPath = quantized
+            break
+        } else if FileManager.default.fileExists(atPath: unquantized.path) {
+            selectedPath = unquantized
+            break
+        }
     }
+
     
     if let path = selectedPath {
         print("Found converted MLX safetensors weights file at: \(path.lastPathComponent)")
@@ -72,7 +89,10 @@ func main() {
             print("❌ Failed to parse safetensors weights file: \(error)")
         }
     } else {
-        print("⚠ Note: Converted .safetensors weights not found at: \(weightsPath.path)")
+        print("⚠ Note: Converted .safetensors weights not found in searched paths:")
+        for dir in searchDirs {
+            print("  - \(dir.path)")
+        }
         print("  Please run the MLX Python converter or downloader steps to test weight loading.")
     }
     
