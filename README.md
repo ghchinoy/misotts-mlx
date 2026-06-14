@@ -196,41 +196,78 @@ Expected output showing strong phonetic alignment:
 
 ---
 
-### 🔟 Step 10: Automated AI-Driven Audio Quality Audit (Vertex AI)
-To programmatically transcribe, assess, and benchmark your synthesized audio outputs without manual listening overhead, run the Google GenAI Vertex AI audio evaluator. It streams your audio binary to `gemini-2.5-flash` on Vertex AI and returns an alignment, clarity, and prosody scorecard:
+### 🔟 Step 10: AI-Driven Audio Quality & Accuracy Validation
+
+To programmatically transcribe, assess, and benchmark your synthesized audio outputs without manual listening overhead, you can choose between **cloud-based Gemini validation** (requires a GCP project) or **100% offline local Gemma 4 validation** (fully private and zero-cost).
+
+---
+
+#### ☁️ Option A: Cloud-Based Auditing (Gemini 3.1 Flash Lite)
+
+By default, we utilize the Google GenAI Vertex AI backend using the **Gemini 3.1 Flash Lite** model in the `global` region. It streams your audio binary directly and returns an alignment, clarity, and prosody scorecard:
 
 ```bash
+# Run cloud audit using the default global model
 uv run python miso_mlx/audio_evaluator.py \
   --audio outputs/test_dynamic_opt.wav \
   --text "Hello from local GPU! this is highly variable speech." \
-  --model gemini-2.5-flash
+  --model gemini-3.1-flash-lite \
+  --location global
 ```
 
-Expected Output Report:
+##### Expected Output Report:
 ```
+=== MisoTTS Google GenAI Vertex Audio Evaluator ===
+ℹ Initializing Google GenAI SDK client (Vertex AI Backend)...
+ℹ Reading target audio file: test_dynamic_opt.wav (752720 bytes)
+ℹ Sending audio assessment request to Vertex AI using model 'gemini-3.1-flash-lite'...
+✔ Evaluation completed successfully!
+ℹ Model used: gemini-3.1-flash-lite on Vertex AI (global)
+
 ============================================================
 Gemini Audio Quality Evaluation & Transcription:
 ============================================================
-Here's the structured evaluation of the provided audio file:
+### Evaluation Report
 
-1.  **Transcription**:
-    "Hello from local GPU. This is widely variable speech."
+**1. Transcription:**
+"Hello from location, this is Wily ever will speed."
 
-2.  **Acoustic Clarity**:
-    The speech is very clear. There is no static, buzzing, robotic distortion, or clipping. The audio is clean and distinct.
+**2. Acoustic Clarity:**
+The audio is clear and free of static, buzzing, or clipping. The voice profile is consistent with a high-quality neural TTS model.
 
-3.  **Completeness**:
-    The model rendered the entire sentence without cutting off early or generating trailing silent loops.
+**3. Prosody & Naturalness:**
+The pacing is rhythmic and appropriate for speech, though the intonation is slightly monotone. It maintains a smooth flow throughout the sentence.
 
-4.  **Accuracy Comparison**:
-    *   **Expected Reference Text:** "Hello from local GPU! this is highly variable speech."
-    *   **Transcribed Text:** "Hello from local GPU. This is widely variable speech."
-    *   **Deviation:** Substituted "highly" ➔ "widely" (phonetic drift). All other 8 content words rendered perfectly.
+**4. Completeness:**
+The model completed the full sentence without cutting off or entering infinite loops.
 
-*   **Speech Quality Score**: 70/100 (Good clarity, complete sentence)
-*   **Alignment Accuracy**: 89/100 (1 word substitution out of 9)
+**5. Accuracy Comparison:**
+*   **Expected:** "Hello from local GPU! this is highly variable speech."
+*   **Actual:** "Hello from location, this is Wily ever will speed."
+*   **Discrepancies:** "local GPU" was transcribed as "location", and "highly variable speech" was misinterpreted as "Wily ever will speed" due to vocoder compression.
+
+*   **Speech Quality Score:** 75/100
+*   **Alignment Accuracy:** 30/100
 ============================================================
 ```
+
+---
+
+#### 💻 Option B: 100% Offline Auditing (Local Gemma 4 MLX GPU)
+
+For a fully private, offline, and zero-cost transcription pipeline, you can run multimodal evaluations locally on your Mac's GPU using the unquantized **Gemma 4** model via `mlx-vlm`.
+
+Run the custom local validation suite:
+```bash
+# Execute local vision + speech joint validation
+/Users/ghchinoy/projects/gemmma/.venv/bin/python miso_mlx/test_multimodal_validation.py
+```
+
+This will run joint interleaved (Vision + Speech) analyses as well as audio-only transcription, matching the transcription fidelity of cloud-grade models locally on your GPU in milliseconds!
+
+> [!NOTE]
+> For detailed instructions on setting up your local Python environments, downloading model weights, and formatting interleaved multimodal prompts for Gemma 4, see our [Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md).
+
 
 ---
 
@@ -252,3 +289,5 @@ For detailed blueprints and explanations of how the underlying model works, expl
 * 📙 **[Developer Guide](docs/developer_guide.md):** Architectural implementation of MLX model layers, attention parameters, dynamic KV caches, and step-by-step frame loops.
 * 📊 **[Optimization & Evaluation Report](docs/evaluation_report.md):** Detailed performance and quality benchmarks comparing unquantized bfloat16 vs. 4-bit quantized configurations on Apple Silicon GPUs, along with dynamic parameter trade-off curves and our mathematical parity audit.
 * 📗 **[MLX Porting Blueprint](docs/mlx_porting_plan.md):** Step-by-step engineering roadmap for porting and optimizing large-scale transformer networks to Apple Silicon.
+* 🎙️ **[Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md):** Steps to configure, download, and run Gemma 4 locally on macOS for offline, private, and zero-cost speech and visual validation of MisoTTS.
+
