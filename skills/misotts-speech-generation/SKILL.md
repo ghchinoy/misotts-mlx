@@ -51,7 +51,21 @@ uv run python miso_mlx/miso_mlx_cli.py clone \
   --output outputs/cloned_output.wav
 ```
 
+### 4. Multi-Speaker Contextual Dialogue Generation
+MisoTTS's Llama backbone supports chaining conversation turns contextually. By feeding prior segment objects (which store the speaker, text transcript, and raw waveform arrays) back into the prompt context list, multiple speakers can converse contextually while preserving distinct speaker timbres.
+
+Run the pre-configured conversational demo:
+```bash
+uv run python miso_mlx/dialogue_generator.py
+```
+
+The script sequentially synthesizes:
+*   **Turn 1 (Speaker 0):** *"Hello there! I am Speaker Zero. Welcome to our local dialogue demo."*
+*   **Turn 2 (Speaker 1):** *"Hi! I am Speaker One. By chaining our model states, we can have a natural, multi-turn conversation."*
+*   ...and contextually chains subsequent responses, saving the combined and normalized conversational track to `outputs/conversation_demo.wav`.
+
 ---
+
 
 ## 🛠️ Parameter Tuning & Optimization
 
