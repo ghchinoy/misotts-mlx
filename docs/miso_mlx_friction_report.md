@@ -18,7 +18,6 @@ Instead, we must design **asynchronous trace-and-compare pipelines**:
 2. Terminate the PyTorch process.
 3. Run a separate MLX script to ingest those files and perform mathematical parity evaluations. This adds substantial latency to the development cycle.
 
----
 
 ## 2. MLX Lazy Evaluation & Just-In-Time (JIT) Compilation Latency
 
@@ -29,8 +28,6 @@ Instead, we must design **asynchronous trace-and-compare pipelines**:
 ### The Friction
 * Standard execution loops can feel silent, unresponsive, or frozen.
 * If a bug in the code triggers a shape misalignment, the error is not thrown at the point of definition. It is only thrown far down the line when `mx.eval()` or `.tolist()` is called, making traceback analysis extremely difficult.
-
----
 
 ## 3. Rotary Position Embeddings (RoPE) and Attention KV Cache Parity
 
@@ -44,7 +41,6 @@ Instead, we must design **asynchronous trace-and-compare pipelines**:
 ### The Friction
 Even a minor 1-pixel discrepancy in index calculation (e.g., passing a 1D index to a layer expecting a 2D index) can cause the Rotary Embedding to shift by 1 sequence step. In deep networks, this 1-step position shift leads to immediate mathematical chaos, transforming valid audio logits into static noise or silence.
 
----
 
 ## 4. The Autoregressive Cascading Error Trap (Premature EOS / Silence)
 
@@ -56,7 +52,6 @@ Even a minor 1-pixel discrepancy in index calculation (e.g., passing a 1D index 
 ### The Friction
 This makes debugging highly non-linear. The audio is not just "slightly lower quality" when things are slightly off; it is **completely silent or unintelligible**. There is no middle ground, making verification a binary success/failure state.
 
----
 
 ## 5. Root-Cause Break-Through: The "Photo-Finish" Logit Race
 
@@ -78,7 +73,6 @@ Because the logits are separated by less than **0.02**, a tiny floating-point pr
 ### The Solution for Testing
 While `argmax` is great for debugging mathematical parity, it is highly vulnerable to this cascading trap. In real-world speech synthesis, **probabilistic top-k / nucleus sampling with a temperature is the standard practice**. By using standard sampling parameters (which are the defaults for the speak command), the model easily bypasses this microscopic deterministic flip, yielding correct, high-fidelity speech on the local Apple Silicon GPU!
 
----
 
 ## 6. Resolving Developer Telemetry & Evaluation Blindspots
 
@@ -93,10 +87,9 @@ To eliminate these developer blindspots, we engineered two high-fidelity additio
    * We added a real-time macOS-safe memory RSS diagnostic (`resource.getrusage`) and high-resolution timers directly inside the `speak` generation loops.
    * After every run, the CLI prints precise wall times, audio playback durations, RTFs, and peak memory consumption down to the megabyte (MB).
 2. **Automated Multi-Modal Audio Quality Evaluator**:
-   * We built a programmatic audio-evaluation harness (`miso_mlx/audio_evaluator.py`) using the official modern Google GenAI SDK (`gemini-3.1-flash-lite`).
+   * We built a programmatic audio-evaluation harness (`miso_mlx/audio_evaluator.py`) using the official  Google GenAI SDK (`gemini-3.1-flash-lite`).
    * The tool streams local WAV bytes directly into Gemini on Vertex AI, automatically transcribing the speech, identifying spelling or text-sequence alignment errors, and grading acoustic naturalness/clarity on a 0-100 scale. This closes the feedback loop, letting developers benchmark models programmatically in milliseconds.
 
----
 
 ## 7. Architectural Breakthrough: Traced Inner-Decoder Frame Compilation
 
@@ -119,7 +112,6 @@ We ran side-by-side uncompiled vs. compiled benchmarks for a 10-second speech sy
 
 The compile warmup on the very first step increases from 5.06s to 15.38s (due to shader compilation), but this trace is cached and saves 1.28 seconds per step thereafter. The compile overhead pays for itself within just 10 steps, saving over 150 seconds on a single 125-step generation!
 
----
 
 ## 8. Physical Streaming Limits of Unified Memory
 
@@ -132,11 +124,8 @@ The compile warmup on the very first step increases from 5.06s to 15.38s (due to
   * Adding the actual computation latency on top of weight streaming limits explains why unquantized models cannot run in real-time on personal devices.
 * **CPU vs. GPU Optimization**: The original PyTorch implementation runs on CPU in bfloat16, but is optimized for multi-threading which can sometimes cache sub-layers, but runs heavily constrained by high fan speeds and thermal throttling.
 
----
 
 > [!TIP]
 > **Key Takeaway & Suggested Path Forward**:
 > 1. **Avoid argmax**: The MLX implementation is verified to be mathematically accurate. Do not use strict `--argmax` testing for speech output, as microscopic precision differences can flip logits in a photo-finish and trigger immediate EOS. Use default top-k/nucleus sampling to generate high-fidelity speech locally on GPU!
 > 2. **Model Weight Quantization for Real-Time Speeds**: To bypass the Unified Memory bandwidth bottleneck and run faster than real-time (RTF < 1.0), we must quantize the 16.38 GB model weights down to **4-bit** or **8-bit** using `mlx.core.quantize`. This reduces the weight streaming footprint to **4.1 GB** or **8.2 GB** respectively, allowing real-time factor (RTF) to drop comfortably below **1.0** on standard Apple Silicon Macs!
-
-

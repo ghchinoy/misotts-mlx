@@ -258,6 +258,16 @@ The command-line tools support environment variables to ensure deterministic, si
 * **Mutative Safety (`--dry-run`):** Performs syntax verification, resolves Hugging Face tokenizers, and verifies weights in milliseconds, without loading the full 16 GB model or starting GPU compilation.
 
 
+## Agent Skills (agentskills.io)
+
+This repository includes custom, single-purpose **Agent Skills** conforming to the [agentskills.io](https://agentskills.io/specification.md) format. These files enable autonomous AI agents to easily discover and execute model migration, audio generation, and evaluation workflows:
+
+* **[mlx-model-porting](skills/mlx-model-porting/SKILL.md):** Port, migrate, and validate PyTorch transformer weights, attention projections, and dynamic KV caches to native MLX.
+* **[misotts-speech-generation](skills/misotts-speech-generation/SKILL.md):** Run local bfloat16 or 4-bit quantized text-to-speech synthesis and zero-shot voice cloning.
+* **[audio-quality-evaluation](skills/audio-quality-evaluation/SKILL.md):** Audit synthesized WAV files using mathematical spectral comparison or multimodal Gemini/Gemma 4 models.
+
+---
+
 ## Deep-Dive Documentation
 
 For detailed explanations of the model architecture, see the documentation below:
@@ -267,3 +277,4 @@ For detailed explanations of the model architecture, see the documentation below
 * **[Optimization & Evaluation Report](docs/evaluation_report.md):** Performance and quality benchmarks comparing unquantized bfloat16 vs. 4-bit quantized configurations on Apple Silicon GPUs, along with parameter trade-off curves and the mathematical parity audit.
 * **[MLX Porting Blueprint](docs/mlx_porting_plan.md):** Roadmap for porting and optimizing large-scale transformer networks to Apple Silicon.
 * **[Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md):** Instructions to configure, download, and run Gemma 4 locally on macOS for offline speech and visual validation of MisoTTS.
+
