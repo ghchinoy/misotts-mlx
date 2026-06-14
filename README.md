@@ -248,6 +248,39 @@ This script runs joint interleaved (vision and speech) analyses as well as audio
 
 ---
 
+## Native Swift-MLX Integration & Validation
+
+The `miso_swift/` directory contains a minimal, standalone Swift package (`MisoSwiftDemo`) demonstrating how to leverage `mlx-swift` to natively load model weights and execute computations on Apple Silicon GPUs (Metal).
+
+### Key Technical Insights
+* **Explicit Array Typing:** In Swift-MLX, `matmul` operations require floating-point matrices. Because Swift overloads can resolve untyped floating-point literals to integers or doubles, constructing arrays without explicit casts can trigger runtime `[matmul]` type mismatch exceptions. 
+* **Type-Safe Solution:** We have explicitly cast arrays as `[Float]` in `miso_swift/Sources/main.swift` to guarantee `float32` compilation on the GPU backend:
+  ```swift
+  let a = MLXArray([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0] as [Float], [2, 4])
+  ```
+
+### Running the Swift Utility
+
+#### Option A: Running via Xcode (Recommended)
+1. Open the folder `miso_swift` or its `Package.swift` file directly in **Xcode**.
+2. Xcode will automatically download and resolve the `mlx-swift` dependency (configured for version `0.10.0+`).
+3. Select the `MisoSwiftDemo` executable target.
+4. Click **Product -> Run** (`Cmd + R`) to execute the validation utility.
+
+> [!WARNING]
+> **Resolving Cached MatMul Type Crashes:** If you previously built the project and encounter the error `Fatal error: [matmul] Only inexact types are supported but int32 and int32 were provided`, Xcode is running an outdated, cached build. To resolve this, clean Xcode's cache by selecting **Product -> Clean Build Folder** (`Cmd + Shift + K`), and then re-run (`Cmd + R`).
+
+#### Option B: Running via Swift PM Command Line
+To build and run the utility natively via the terminal:
+```bash
+cd miso_swift
+swift run
+```
+*(Note: Terminal execution may emit warnings if macOS sandboxing prevents loading the default `metallib` shader library outside of Xcode.)*
+
+---
+
+
 
 ## CLI Global Diagnostic Features
 
