@@ -15,7 +15,6 @@ This repository contains tools, developer guides, and command-line utilities for
 
 Running an 8.2B parameter model on standard macOS CPU backends is resource-intensive. This suite ports the model components (the neural synthesizer, decoder stages, and attention layers) to Apple's native **Metal GPU (via MLX)**, delivering up to a **6.7x speedup** and enabling real-time local speech generation with reduced memory usage.
 
----
 
 ## Repository Layout
 
@@ -57,7 +56,6 @@ Ensure you have the following installed on your system:
 * **uv** (fast package manager for Python)
 * **gcloud CLI** (optional, required if using the automated Vertex AI audio evaluator)
 
----
 
 ### Step 1: Environment Setup
 Clone the repository and synchronize dependencies using `uv` to isolate compiled C++ and Metal backends within a virtual environment:
@@ -67,16 +65,12 @@ Clone the repository and synchronize dependencies using `uv` to isolate compiled
 uv sync
 ```
 
----
-
 ### Step 2: System Diagnostics
 Before running weight-conversion tasks, execute the diagnostics command to scan your hardware specifications (GPU cores, memory bandwidth, unified memory allocation) and verify directories:
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py optimize
 ```
-
----
 
 ### Step 3: Download and Cache Weights
 To avoid network bottlenecks, download and cache all required weights (Llama-3.2, Mimi codec, SilentCipher, and the MisoTTS backbone) to your local Hugging Face storage:
@@ -87,8 +81,6 @@ uv run python miso_mlx/miso_mlx_cli.py download
 > [!NOTE]
 > This command requires approximately **30–40 GB** of free disk space to store all checkpoints and model definitions.
 
----
-
 ### Step 4: Convert PyTorch Weights to MLX Format
 The downloaded checkpoints are stored in PyTorch format. Run the weight translation utility to map, transpose, and serialize them into MLX `.safetensors` files compatible with Metal memory layouts:
 
@@ -96,8 +88,6 @@ The downloaded checkpoints are stored in PyTorch format. Run the weight translat
 uv run python miso_mlx/mlx_converter.py
 ```
 This utility reads the PyTorch model keys, applies the mapping topology, and saves the translation blueprint to `miso_mlx/mlx_weights/pytorch_to_mlx_mapping.txt` for verification.
-
----
 
 ### Step 5: Text-to-Speech Synthesis (bfloat16 MLX GPU)
 Synthesize your first audio file using the unquantized `bfloat16` model on your Mac's Metal GPU.
@@ -110,8 +100,6 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
   --output outputs/hello_unquantized.wav
 ```
 *Running on the GPU via `--mlx` streams model weights using Apple Silicon unified memory, minimizing CPU overhead.*
-
----
 
 ### Step 6: 4-bit Model Quantization
 The unquantized weights require 16.38 GB of RAM, which can limit streaming speed. You can compress the linear projection and transformer layers to 4-bit in-place (reducing weight size to 5.52 GB and halving unified memory usage) by adding the `--quant` flag:
@@ -126,8 +114,6 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
 ```
 * **Performance Impact:** First-step JIT compilation drops from **6.28s to 0.53s (11.8x reduction)**, and the real-time generation factor (RTF) is reduced, resulting in up to **3.82x faster step inference**.
 
----
-
 ### Step 7: Zero-Shot Voice Cloning
 Clone a target voice by supplying a short (3–10s) audio reference file and its transcription. The autoregressive decoder uses the reference acoustic codes to synthesize the new text with the target speaker's timbre:
 
@@ -138,8 +124,6 @@ uv run python miso_mlx/miso_mlx_cli.py clone \
   --prompt-text "Hello! This is synthesized locally on my Mac using our unified GPU workspace." \
   --output outputs/cloned_output.wav
 ```
-
----
 
 ### Step 8: Dynamic Parameter Scheduling
 Quantized models can sometimes drift, leading to premature cut-offs at low temperatures or sibilant feedback at high temperatures. You can avoid these issues and bypass the SilentCipher watermark by applying dynamic temperature decay and Classifier-Free Guidance (CFG):
@@ -160,7 +144,6 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
 *   `--temp-start 0.7 --temp-min 0.4 --temp-decay-steps 30`: Decays the sampling temperature over 30 steps to prevent accumulation of sibilant noise.
 *   `--cfg-scale 2.0`: Increases the text-guidance conditioning scale, preventing the model from generating silence loops.
 
----
 
 ### Step 9: Mathematical Parity Verification
 Compare your generated outputs against a PyTorch CPU baseline to measure spectral divergence and phonetic alignment:
@@ -194,13 +177,10 @@ Expected output showing strong phonetic alignment:
   Temporal Envelope Correlation: 0.2351 (expected >0.60 for phonetic alignment)
 ```
 
----
-
 ### Step 10: Audio Quality and Accuracy Validation
 
 You can programmatically transcribe and assess your synthesized audio outputs using either **cloud-based Gemini validation** or **offline local Gemma 4 validation**.
 
----
 
 #### Option A: Cloud-Based Auditing (Gemini 3.1 Flash Lite)
 
@@ -251,8 +231,6 @@ The model completed the full sentence without cutting off or entering infinite l
 ============================================================
 ```
 
----
-
 #### Option B: Offline Auditing (Local Gemma 4 MLX GPU)
 
 To run evaluations offline without external API dependencies, you can execute multimodal assessments locally on your Mac's GPU using the **Gemma 4** model via `mlx-vlm`.
@@ -270,6 +248,7 @@ This script runs joint interleaved (vision and speech) analyses as well as audio
 
 ---
 
+
 ## CLI Global Diagnostic Features
 
 ### Headless and Automated Operation
@@ -278,7 +257,6 @@ The command-line tools support environment variables to ensure deterministic, si
 * **No TUI / No Color (`NO_COLOR=1` or `MISO_NO_TUI=1`):** Disables ANSI terminal escaping to produce clean logging streams.
 * **Mutative Safety (`--dry-run`):** Performs syntax verification, resolves Hugging Face tokenizers, and verifies weights in milliseconds, without loading the full 16 GB model or starting GPU compilation.
 
----
 
 ## Deep-Dive Documentation
 
