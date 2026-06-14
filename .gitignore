@@ -1,0 +1,21 @@
+# Virtual Environment & Python Caches
+.venv/
+__pycache__/
+*.pyc
+
+# Local Model Weights & Tokenizers
+miso_mlx/mlx_weights/
+meta-llama/
+
+# Generated Audio Outputs
+*.wav
+outputs/
+
+# OS Specific
+.DS_Store
+
+# Reference Implementation (unmodified PyTorch baseline)
+sources/
+
+# Local Working Reports & Visual Drafts
+docs/reports/
