@@ -1,23 +1,23 @@
 # MisoTTS Apple Silicon (MLX) Tooling & Explainer Suite
 
-Welcome to the **MisoTTS Apple Silicon (MLX) Optimization Suite**. This repository contains detailed architectural analyses, step-by-step developer guides, and high-performance command-line utilities designed to run, quantize, and mathematically evaluate the **MisoTTS 8B** model locally on macOS utilizing Apple's native **MLX** GPU framework.
+This repository contains tools, developer guides, and command-line utilities for running, quantizing, and evaluating the **MisoTTS 8B** model locally on macOS using Apple's native **MLX** GPU framework.
 
 ---
 
-## 🌟 Model Introduction & Capabilities
+## Model Introduction & Capabilities
 
-**MisoTTS 8B** is a state-of-the-art **8.2 Billion parameter Text-to-Dialogue RVQ Transformer** optimized for high-fidelity English conversational speech synthesis and zero-shot voice cloning.
+**MisoTTS 8B** is an **8.2 Billion parameter Text-to-Dialogue RVQ Transformer** optimized for high-fidelity English conversational speech synthesis and zero-shot voice cloning.
 
 * **Contextual Conversational Flow:** Natively maintains segment history, ensuring stylistic consistency, emotion, and realistic turn-taking transitions.
-* **Simple Speaker Conditioning:** Switch speakers seamlessly using simple inline text prefixing (e.g., `[0] Hello there!`).
-* **Zero-Shot Voice Cloning:** Synthesize speech in any target voice using only a 3–10 second clean reference audio clip and its text transcript.
-* **Implicit Content Protection:** Integrates Sony's `SilentCipher` 44.1 kHz acoustic watermarking by default for responsible AI deployment.
+* **Simple Speaker Conditioning:** Switch speakers using inline text prefixing (e.g., `[0] Hello there!`).
+* **Zero-Shot Voice Cloning:** Synthesize speech in a target voice using a 3–10 second clean reference audio clip and its text transcript.
+* **Implicit Content Protection:** Integrates Sony's `SilentCipher` 44.1 kHz acoustic watermarking by default.
 
-On standard macOS CPU backends, running an 8.2B model is extremely resource-intensive. This suite ports the neural synthesizer, decoder stages, and attention layers to Apple's native **Metal GPU (via MLX)**, delivering up to **6.7x speedups** and enabling local, real-time speech generation with highly-compressed memory footprints.
+Running an 8.2B parameter model on standard macOS CPU backends is resource-intensive. This suite ports the model components (the neural synthesizer, decoder stages, and attention layers) to Apple's native **Metal GPU (via MLX)**, delivering up to a **6.7x speedup** and enabling real-time local speech generation with reduced memory usage.
 
 ---
 
-## 📂 Repository Layout
+## Repository Layout
 
 ```
 misotts/ (Project Root)
@@ -34,7 +34,7 @@ misotts/ (Project Root)
 │   ├── mlx_converter.py    # Safetensors weight mapper/translator utility
 │   ├── compare_audio.py    # Cross-backend spectral comparison engine
 │   └── audio_evaluator.py  # Vertex AI Gemini-powered speech quality auditor
-├── docs/                   # Fleshed-Out Technical Manuals
+├── docs/                   # Technical Manuals
 │   ├── explainer.md        # 3-Stage architecture & phonetics guide
 │   ├── developer_guide.md  # Detailed MLX layer implementation guide
 │   ├── evaluation_report.md # Performance benchmarks & dynamic parameter trials
@@ -46,21 +46,21 @@ misotts/ (Project Root)
 
 ---
 
-## 🚀 End-to-End Walkthrough
+## End-to-End Walkthrough
 
-Follow this step-by-step workflow to configure, run, quantize, and programmatically evaluate the MisoTTS model on your Mac.
+Follow this workflow to configure, run, quantize, and evaluate the MisoTTS model on macOS.
 
-### 📋 Prerequisites
+### Prerequisites
 Ensure you have the following installed on your system:
 * **macOS** with Apple Silicon (M1, M2, M3, or M4 series chips)
 * **Python 3.12** or newer
-* **uv** (recommended fast package manager for Python)
-* **gcloud CLI** (optional, required if using the automated AI audio evaluator)
+* **uv** (fast package manager for Python)
+* **gcloud CLI** (optional, required if using the automated Vertex AI audio evaluator)
 
 ---
 
-### 1️⃣ Step 1: Environment Setup
-Clone the repository and synchronize dependencies using `uv`. This will isolate all compiled C++ and Metal backends within a local virtual environment:
+### Step 1: Environment Setup
+Clone the repository and synchronize dependencies using `uv` to isolate compiled C++ and Metal backends within a virtual environment:
 
 ```bash
 # Sync package locks and build virtual environment
@@ -69,8 +69,8 @@ uv sync
 
 ---
 
-### 2️⃣ Step 2: System Diagnostic Scan
-Before running heavy weight-conversion tasks, execute the optimization diagnostic tool to scan your Mac's hardware specifications (GPU cores, memory bandwidth, Unified Memory allocations) and verify directories:
+### Step 2: System Diagnostics
+Before running weight-conversion tasks, execute the diagnostics command to scan your hardware specifications (GPU cores, memory bandwidth, unified memory allocation) and verify directories:
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py optimize
@@ -78,29 +78,29 @@ uv run python miso_mlx/miso_mlx_cli.py optimize
 
 ---
 
-### 3️⃣ Step 3: Pre-Download and Cache Weights
-To prevent network bottlenecks during local operations, pre-download and cache all required weights (Llama-3.2, Mimi codec, SilentCipher watermarker, and the MisoTTS backbone) to your local Hugging Face storage:
+### Step 3: Download and Cache Weights
+To avoid network bottlenecks, download and cache all required weights (Llama-3.2, Mimi codec, SilentCipher, and the MisoTTS backbone) to your local Hugging Face storage:
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py download
 ```
 > [!NOTE]
-> This command requires approximately **30–40 GB** of free disk space to store all model safe-tensors checkpoints and model definitions.
+> This command requires approximately **30–40 GB** of free disk space to store all checkpoints and model definitions.
 
 ---
 
-### 4️⃣ Step 4: Translate PyTorch Weights to MLX Format
-The downloaded checkpoints are stored in standard PyTorch format. Run our Safetensors weight translation utility to map, transpose, and serialize them into unified MLX `.safetensors` files compatible with Metal memory layouts:
+### Step 4: Convert PyTorch Weights to MLX Format
+The downloaded checkpoints are stored in PyTorch format. Run the weight translation utility to map, transpose, and serialize them into MLX `.safetensors` files compatible with Metal memory layouts:
 
 ```bash
 uv run python miso_mlx/mlx_converter.py
 ```
-This utility reads the PyTorch model keys, applies the mapping topology, and saves the direct translation blueprint to `miso_mlx/mlx_weights/pytorch_to_mlx_mapping.txt` for your verification.
+This utility reads the PyTorch model keys, applies the mapping topology, and saves the translation blueprint to `miso_mlx/mlx_weights/pytorch_to_mlx_mapping.txt` for verification.
 
 ---
 
-### 5️⃣ Step 5: High-Fidelity Text-to-Speech (bfloat16 MLX GPU)
-Synthesize your first audio file using the unquantized `bfloat16` model executing entirely on your Mac's Metal GPU.
+### Step 5: Text-to-Speech Synthesis (bfloat16 MLX GPU)
+Synthesize your first audio file using the unquantized `bfloat16` model on your Mac's Metal GPU.
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py speak \
@@ -109,12 +109,12 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
   --mlx \
   --output outputs/hello_unquantized.wav
 ```
-*By running on the GPU via `--mlx`, the massive memory bandwidth of Apple Silicon unified memory streams layer weights in parallel, keeping your CPU cool and fans quiet.*
+*Running on the GPU via `--mlx` streams model weights using Apple Silicon unified memory, minimizing CPU overhead.*
 
 ---
 
-### 6️⃣ Step 6: 4-bit Model Quantization & Blistering Speedups
-The full model weights require approximately **16.38 GB of RAM**, creating streaming bandwidth bottlenecks. Compress the linear projection and transformer layers to **4-bit** in-place (reducing weight size to **5.52 GB** and cutting Unified Memory usage in half) by adding the `--quant` flag:
+### Step 6: 4-bit Model Quantization
+The unquantized weights require 16.38 GB of RAM, which can limit streaming speed. You can compress the linear projection and transformer layers to 4-bit in-place (reducing weight size to 5.52 GB and halving unified memory usage) by adding the `--quant` flag:
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py speak \
@@ -124,12 +124,12 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
   --quant \
   --output outputs/hello_4bit_quant.wav
 ```
-* **Performance Impact:** First-step JIT compiler warmup drops from **6.28s to 0.53s (11.8x reduction)**, and real-time generation factor (RTF) drops comfortably, delivering up to **3.82x faster step inference**!
+* **Performance Impact:** First-step JIT compilation drops from **6.28s to 0.53s (11.8x reduction)**, and the real-time generation factor (RTF) is reduced, resulting in up to **3.82x faster step inference**.
 
 ---
 
-### 7️⃣ Step 7: Zero-Shot Voice Cloning
-Clone any target voice by supplying a short (3–10s) clean audio reference file along with its exact transcription. The AR decoder will ingest the acoustic codes and speak the new text with the reference speaker's timbre:
+### Step 7: Zero-Shot Voice Cloning
+Clone a target voice by supplying a short (3–10s) audio reference file and its transcription. The autoregressive decoder uses the reference acoustic codes to synthesize the new text with the target speaker's timbre:
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py clone \
@@ -141,8 +141,8 @@ uv run python miso_mlx/miso_mlx_cli.py clone \
 
 ---
 
-### 8️⃣ Step 8: Dynamic Parameter Scheduling (Studio-Quality Sweet Spot)
-Quantized weights can sometimes drift, triggering a **"Silence Attractor" Cut-Off** (low temperature) or a **"Sibilant Hissing" Feedback Loop** (high temperature). Bypassing the SilentCipher watermark and applying **dynamic temperature decay scheduling** and Classifier-Free Guidance (CFG) isolates the acoustic sweet-spot:
+### Step 8: Dynamic Parameter Scheduling
+Quantized models can sometimes drift, leading to premature cut-offs at low temperatures or sibilant feedback at high temperatures. You can avoid these issues and bypass the SilentCipher watermark by applying dynamic temperature decay and Classifier-Free Guidance (CFG):
 
 ```bash
 uv run python miso_mlx/miso_mlx_cli.py speak \
@@ -156,14 +156,14 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
   --no-watermark \
   --output outputs/test_dynamic_opt.wav
 ```
-*   `--no-watermark`: Removes the silent-cipher watermarking pass, completely eliminating trailing whirring/background hums.
-*   `--temp-start 0.7 --temp-min 0.4 --temp-decay-steps 30`: Decays the entropy step-by-step to prevent the accumulated sibilant hiss.
-*   `--cfg-scale 2.0`: Increases the text-guidance conditioning vector, preventing the model from falling into silence loops.
+*   `--no-watermark`: Removes the SilentCipher watermark, which can eliminate background noise or artifacts.
+*   `--temp-start 0.7 --temp-min 0.4 --temp-decay-steps 30`: Decays the sampling temperature over 30 steps to prevent accumulation of sibilant noise.
+*   `--cfg-scale 2.0`: Increases the text-guidance conditioning scale, preventing the model from generating silence loops.
 
 ---
 
-### 9️⃣ Step 9: Mathematical Parity Verification
-Mathematically audit your generated outputs against a PyTorch CPU baseline to evaluate spectral divergence and phonetic temporal envelope correlation:
+### Step 9: Mathematical Parity Verification
+Compare your generated outputs against a PyTorch CPU baseline to measure spectral divergence and phonetic alignment:
 
 ```bash
 uv run python miso_mlx/compare_audio.py \
@@ -196,15 +196,15 @@ Expected output showing strong phonetic alignment:
 
 ---
 
-### 🔟 Step 10: AI-Driven Audio Quality & Accuracy Validation
+### Step 10: Audio Quality and Accuracy Validation
 
-To programmatically transcribe, assess, and benchmark your synthesized audio outputs without manual listening overhead, you can choose between **cloud-based Gemini validation** (requires a GCP project) or **100% offline local Gemma 4 validation** (fully private and zero-cost).
+You can programmatically transcribe and assess your synthesized audio outputs using either **cloud-based Gemini validation** or **offline local Gemma 4 validation**.
 
 ---
 
-#### ☁️ Option A: Cloud-Based Auditing (Gemini 3.1 Flash Lite)
+#### Option A: Cloud-Based Auditing (Gemini 3.1 Flash Lite)
 
-By default, we utilize the Google GenAI Vertex AI backend using the **Gemini 3.1 Flash Lite** model in the `global` region. It streams your audio binary directly and returns an alignment, clarity, and prosody scorecard:
+This option uses the Google GenAI SDK on Vertex AI with the **Gemini 3.1 Flash Lite** model to transcribe the audio and evaluate alignment, clarity, and prosody:
 
 ```bash
 # Run cloud audit using the default global model
@@ -253,9 +253,9 @@ The model completed the full sentence without cutting off or entering infinite l
 
 ---
 
-#### 💻 Option B: 100% Offline Auditing (Local Gemma 4 MLX GPU)
+#### Option B: Offline Auditing (Local Gemma 4 MLX GPU)
 
-For a fully private, offline, and zero-cost transcription pipeline, you can run multimodal evaluations locally on your Mac's GPU using the unquantized **Gemma 4** model via `mlx-vlm`.
+To run evaluations offline without external API dependencies, you can execute multimodal assessments locally on your Mac's GPU using the **Gemma 4** model via `mlx-vlm`.
 
 Run the custom local validation suite:
 ```bash
@@ -263,31 +263,29 @@ Run the custom local validation suite:
 /Users/ghchinoy/projects/gemmma/.venv/bin/python miso_mlx/test_multimodal_validation.py
 ```
 
-This will run joint interleaved (Vision + Speech) analyses as well as audio-only transcription, matching the transcription fidelity of cloud-grade models locally on your GPU in milliseconds!
+This script runs joint interleaved (vision and speech) analyses as well as audio transcription.
 
 > [!NOTE]
-> For detailed instructions on setting up your local Python environments, downloading model weights, and formatting interleaved multimodal prompts for Gemma 4, see our [Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md).
-
+> For instructions on setting up local Python environments, downloading model weights, and formatting interleaved multimodal prompts for Gemma 4, see the [Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md).
 
 ---
 
-## 🛠️ CLI Global Diagnostic Features
+## CLI Global Diagnostic Features
 
-### Headless and Agent-Aware Operation
-The command-line tools support global environment variable flags to ensure deterministic, silent execution inside developer scripts, CI/CD pipelines, and autonomous AI coding environments:
+### Headless and Automated Operation
+The command-line tools support environment variables to ensure deterministic, silent execution inside scripts, CI/CD pipelines, and automated coding environments:
 * **JSON Output (`--json`):** Redirects standard warning logs to `stderr` and prints machine-readable JSON blocks to `stdout`.
-* **No TUI / No Color (`NO_COLOR=1` or `MISO_NO_TUI=1`):** Dynamically defeats all ANSI terminal escaping to produce clean logging streams.
-* **Mutative Safety (`--dry-run`):** Performs syntax verification, resolves Hugging Face tokenizers, and verifies weights exist in milliseconds, without loading heavy 16 GB models or executing GPU compiling runs.
+* **No TUI / No Color (`NO_COLOR=1` or `MISO_NO_TUI=1`):** Disables ANSI terminal escaping to produce clean logging streams.
+* **Mutative Safety (`--dry-run`):** Performs syntax verification, resolves Hugging Face tokenizers, and verifies weights in milliseconds, without loading the full 16 GB model or starting GPU compilation.
 
 ---
 
-## 📖 Deep-Dive Documentation
+## Deep-Dive Documentation
 
-For detailed blueprints and explanations of how the underlying model works, explore our fleshed-out explainer guides:
+For detailed explanations of the model architecture, see the documentation below:
 
-* 📘 **[Technical Explainer & Phonetics Guide](docs/explainer.md):** Deep-dive into the 3-stage architecture (Mimi, Llama 8B, Llama 300M) and detailed answers on IPA/X-SAMPA phonetic inputs.
-* 📙 **[Developer Guide](docs/developer_guide.md):** Architectural implementation of MLX model layers, attention parameters, dynamic KV caches, and step-by-step frame loops.
-* 📊 **[Optimization & Evaluation Report](docs/evaluation_report.md):** Detailed performance and quality benchmarks comparing unquantized bfloat16 vs. 4-bit quantized configurations on Apple Silicon GPUs, along with dynamic parameter trade-off curves and our mathematical parity audit.
-* 📗 **[MLX Porting Blueprint](docs/mlx_porting_plan.md):** Step-by-step engineering roadmap for porting and optimizing large-scale transformer networks to Apple Silicon.
-* 🎙️ **[Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md):** Steps to configure, download, and run Gemma 4 locally on macOS for offline, private, and zero-cost speech and visual validation of MisoTTS.
-
+* **[Technical Explainer & Phonetics Guide](docs/explainer.md):** Analysis of the 3-stage architecture (Mimi, Llama 8B, Llama 300M) and documentation on IPA/X-SAMPA phonetic inputs.
+* **[Developer Guide](docs/developer_guide.md):** Implementation details of MLX model layers, attention parameters, dynamic KV caches, and step-by-step frame generation loops.
+* **[Optimization & Evaluation Report](docs/evaluation_report.md):** Performance and quality benchmarks comparing unquantized bfloat16 vs. 4-bit quantized configurations on Apple Silicon GPUs, along with parameter trade-off curves and the mathematical parity audit.
+* **[MLX Porting Blueprint](docs/mlx_porting_plan.md):** Roadmap for porting and optimizing large-scale transformer networks to Apple Silicon.
+* **[Local Gemma 4 Multimodal Validation Setup Guide](docs/gemma4_setup_guide.md):** Instructions to configure, download, and run Gemma 4 locally on macOS for offline speech and visual validation of MisoTTS.
