@@ -466,7 +466,7 @@ struct ContentView: View {
                             // Audio details card
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("studio_output.wav")
+                                    Text(audioURL.lastPathComponent)
                                         .font(.subheadline.bold())
                                     Text("Local AI-synthesized 24kHz Audio")
                                         .font(.caption)

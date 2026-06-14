@@ -138,15 +138,24 @@ class MisoSynthesisWorker: ObservableObject {
             return
         }
         
-        let outputWav = projectRoot
-            .appendingPathComponent("outputs")
-            .appendingPathComponent("studio_output.wav")
-            
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+        
+        let detailSuffix = isClone ? "clone" : "spk\(speaker)"
+        let paramsStr = "t\(String(format: "%.1f", tempStart))_cfg\(String(format: "%.1f", cfgScale))"
+        let slug = makeSlug(from: text)
+        let uniqueFilename = "miso_\(timestamp)_\(detailSuffix)_\(paramsStr)\(slug.isEmpty ? "" : "_\(slug)").wav"
+        
+        let outputsDir = projectRoot.appendingPathComponent("outputs")
+        
         // Ensure outputs folder exists
         try? FileManager.default.createDirectory(
-            at: projectRoot.appendingPathComponent("outputs"),
+            at: outputsDir,
             withIntermediateDirectories: true
         )
+        
+        let outputWav = outputsDir.appendingPathComponent(uniqueFilename)
         
         // Build arguments
         var args: [String] = [cliScript.path]
@@ -264,9 +273,19 @@ class MisoSynthesisWorker: ObservableObject {
                     self?.appState = .success
                     self?.generatedAudioURL = outputWav
                     
+                    // Maintain latest studio_output.wav for backwards compatibility and easy access
+                    if let latestWav = self?.projectRoot.appendingPathComponent("outputs").appendingPathComponent("studio_output.wav") {
+                        let fileManager = FileManager.default
+                        if fileManager.fileExists(atPath: latestWav.path) {
+                            try? fileManager.removeItem(at: latestWav)
+                        }
+                        try? fileManager.copyItem(at: outputWav, to: latestWav)
+                    }
+                    
                     self?.appendLog("\n\n============================================================")
                     self?.appendLog("\n✅ SPEECH SYNTHESIS SUCCESS!")
-                    self?.appendLog("\nAudio file created at: outputs/studio_output.wav")
+                    self?.appendLog("\nAudio file archived at: outputs/\(outputWav.lastPathComponent)")
+                    self?.appendLog("\nAudio file copied to: outputs/studio_output.wav")
                     self?.appendLog("\n============================================================")
                 } else {
                     self?.appState = .failed
@@ -283,6 +302,16 @@ class MisoSynthesisWorker: ObservableObject {
             consoleLogs += "❌ Failed to launch child process: \(error.localizedDescription)"
             activeProcess = nil
         }
+    }
+    
+    private func makeSlug(from text: String, maxLength: Int = 15) -> String {
+        let allowedChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " _-"))
+        let filtered = text.components(separatedBy: allowedChars.inverted).joined()
+        let trimmed = filtered.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeText = trimmed.replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "__", with: "_")
+            .lowercased()
+        return String(safeText.prefix(maxLength))
     }
     
     private func appendLog(_ text: String) {
