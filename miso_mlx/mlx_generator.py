@@ -274,6 +274,7 @@ class MLXGenerator:
         temp_min: Optional[float] = None,
         temp_decay_steps: Optional[int] = None,
         cfg_scale: float = 1.0,
+        watermark_key: Optional[List[int]] = None,
     ) -> mx.array:
         """
         The main MLX GPU-accelerated autoregressive speech synthesis loop.
@@ -473,7 +474,8 @@ class MLXGenerator:
                 t_wm_start = time.perf_counter()
                 if not no_watermark and self.watermarker is not None:
                     print(" Done.\n[MLX] Applying SilentCipher acoustic watermark...", end="", flush=True)
-                    audio, wm_sample_rate = watermark(self.watermarker, audio, self.sample_rate, MISO_TTS_WATERMARK)
+                    wm_key = watermark_key if watermark_key is not None else MISO_TTS_WATERMARK
+                    audio, wm_sample_rate = watermark(self.watermarker, audio, self.sample_rate, wm_key)
                     audio = torchaudio.functional.resample(audio, orig_freq=wm_sample_rate, new_freq=self.sample_rate)
                 else:
                     if no_watermark:

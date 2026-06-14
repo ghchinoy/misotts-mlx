@@ -179,6 +179,27 @@ def handle_download(args):
         sys.exit(1)
 
 def handle_speak(args):
+    # Resolve watermark key and monkey-patch watermarking
+    wm_key = args.watermark_key
+    if wm_key is None:
+        env_key = os.environ.get("MISO_TTS_WATERMARK_KEY")
+        if env_key:
+            try:
+                wm_key = parse_watermark_key(env_key)
+            except Exception as e:
+                print_error(f"Error parsing MISO_TTS_WATERMARK_KEY environment variable: {e}")
+                sys.exit(1)
+                
+    if wm_key is not None:
+        try:
+            import watermarking
+            watermarking.MISO_TTS_WATERMARK = wm_key
+            if not is_json_mode:
+                print_info(f"Applying custom SilentCipher watermark key: {wm_key}")
+        except Exception as e:
+            if not is_json_mode:
+                print_warning(f"Could not monkey-patch watermarking module: {e}")
+
     print_header("MisoTTS Speak: Text-to-Speech Generation")
     
     # Check for Converted and Quantized MLX weight files
@@ -326,6 +347,7 @@ def handle_speak(args):
                     temp_min=args.temp_min,
                     temp_decay_steps=args.temp_decay_steps,
                     cfg_scale=args.cfg_scale,
+                    watermark_key=wm_key,
                 )
 
                 
@@ -488,6 +510,27 @@ def handle_speak(args):
             sys.exit(1)
 
 def handle_clone(args):
+    # Resolve watermark key and monkey-patch watermarking
+    wm_key = args.watermark_key
+    if wm_key is None:
+        env_key = os.environ.get("MISO_TTS_WATERMARK_KEY")
+        if env_key:
+            try:
+                wm_key = parse_watermark_key(env_key)
+            except Exception as e:
+                print_error(f"Error parsing MISO_TTS_WATERMARK_KEY environment variable: {e}")
+                sys.exit(1)
+                
+    if wm_key is not None:
+        try:
+            import watermarking
+            watermarking.MISO_TTS_WATERMARK = wm_key
+            if not is_json_mode:
+                print_info(f"Applying custom SilentCipher watermark key: {wm_key}")
+        except Exception as e:
+            if not is_json_mode:
+                print_warning(f"Could not monkey-patch watermarking module: {e}")
+
     print_header("MisoTTS Clone: Voice Cloning / Prompted Generation")
     
     prompt_audio_path = Path(args.prompt_audio)
@@ -677,6 +720,7 @@ def handle_clone(args):
                     temp_min=args.temp_min,
                     temp_decay_steps=args.temp_decay_steps,
                     cfg_scale=args.cfg_scale,
+                    watermark_key=wm_key,
                 )
 
                 
@@ -819,6 +863,94 @@ def handle_clone(args):
             print_error(f"Cloning synthesis failed: {e}")
             sys.exit(1)
 
+def parse_watermark_key(key_str: str) -> list[int]:
+    if not key_str:
+        return None
+    try:
+        parts = [int(x.strip()) for x in key_str.split(",")]
+        if len(parts) != 5:
+            raise ValueError("Watermark key must have exactly 5 integers.")
+        return parts
+    except Exception as e:
+        raise argparse.ArgumentTypeError(f"Invalid watermark key format: {e}. Must be 5 comma-separated integers (e.g., 1,2,3,4,5).")
+
+def handle_verify(args):
+    # Dynamic JSON mode setup
+    global is_json_mode
+    if args.json:
+        is_json_mode = True
+        
+    if not is_json_mode:
+        print_header("SilentCipher Audio Watermark Verification")
+        
+    audio_path = Path(args.audio)
+    if not audio_path.exists():
+        print_error(f"Audio file not found: {audio_path}")
+        if is_json_mode:
+            print(json.dumps({"status": "error", "reason": "file_not_found"}), file=sys.stderr)
+        sys.exit(1)
+        
+    # Resolve watermark key
+    wm_key = args.watermark_key
+    if wm_key is None:
+        env_key = os.environ.get("MISO_TTS_WATERMARK_KEY")
+        if env_key:
+            try:
+                wm_key = parse_watermark_key(env_key)
+                if not is_json_mode:
+                    print_info(f"Resolved custom watermark key from environment: {wm_key}")
+            except Exception as e:
+                print_error(f"Error parsing MISO_TTS_WATERMARK_KEY environment variable: {e}")
+                sys.exit(1)
+        else:
+            from watermarking import MISO_TTS_WATERMARK
+            wm_key = MISO_TTS_WATERMARK
+            if not is_json_mode:
+                print_info(f"Using default watermark key: {wm_key}")
+                
+    try:
+        from watermarking import load_watermarker, verify, load_audio
+        import torch
+        
+        if not is_json_mode:
+            print_info("Loading SilentCipher watermarking model on CPU...")
+        watermarker = load_watermarker(device="cpu")
+        
+        if not is_json_mode:
+            print_info(f"Reading target audio file: {audio_path.name}")
+        audio_array, sample_rate = load_audio(str(audio_path))
+        
+        if not is_json_mode:
+            print_info("Decoding and verifying watermark...")
+        is_watermarked = verify(watermarker, audio_array, sample_rate, wm_key)
+        
+        if is_watermarked:
+            if not is_json_mode:
+                print_success(f"Watermark verified! The file is signed with key: {wm_key}")
+            if is_json_mode:
+                print(json.dumps({
+                    "status": "success",
+                    "audio_file": str(audio_path.resolve()),
+                    "verified": True,
+                    "watermark_key": wm_key
+                }, indent=2))
+        else:
+            if not is_json_mode:
+                print_warning(f"No matching watermark found for key: {wm_key}")
+            if is_json_mode:
+                print(json.dumps({
+                    "status": "success",
+                    "audio_file": str(audio_path.resolve()),
+                    "verified": False,
+                    "watermark_key": wm_key
+                }, indent=2))
+                
+    except Exception as e:
+        print_error(f"Watermark verification failed: {e}")
+        if is_json_mode:
+            print(json.dumps({"status": "error", "reason": str(e)}), file=sys.stderr)
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(
         description="MisoTTS 8B Apple Silicon Optimizer & Voice Synthesis CLI Tool",
@@ -887,6 +1019,7 @@ def main():
     parser_speak.add_argument("--temp-min", type=float, default=None, help="Minimum/ending temperature for dynamic temperature decay scheduling.")
     parser_speak.add_argument("--temp-decay-steps", type=int, default=None, help="Number of steps over which temperature decays.")
     parser_speak.add_argument("--cfg-scale", type=float, default=1.0, help="Classifier-Free Guidance (CFG) scale (1.0 means disabled).")
+    parser_speak.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key (e.g. 1,2,3,4,5).")
 
 
     # Subcommand: clone
@@ -933,6 +1066,24 @@ def main():
     parser_clone.add_argument("--temp-min", type=float, default=None, help="Minimum/ending temperature for dynamic temperature decay scheduling.")
     parser_clone.add_argument("--temp-decay-steps", type=int, default=None, help="Number of steps over which temperature decays.")
     parser_clone.add_argument("--cfg-scale", type=float, default=1.0, help="Classifier-Free Guidance (CFG) scale (1.0 means disabled).")
+    parser_clone.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key (e.g. 1,2,3,4,5).")
+
+
+    # Subcommand: verify
+    parser_verify = subparsers.add_parser(
+        "verify",
+        help="Verify if a WAV audio file is signed with a SilentCipher watermark key.",
+        epilog=f"""{BOLD}Examples:{RESET}
+  {COLOR_COMMAND}# Verify audio using default watermark key{RESET}
+  uv run python miso_mlx/miso_mlx_cli.py verify --audio outputs/my_cloned_gpu.wav
+
+  {COLOR_COMMAND}# Verify audio using a custom watermark key{RESET}
+  uv run python miso_mlx/miso_mlx_cli.py verify --audio outputs/my_cloned_gpu.wav --watermark-key 1,2,3,4,5
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_verify.add_argument("--audio", "-a", type=str, required=True, help="Path to the WAV audio file to verify.")
+    parser_verify.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key to verify (e.g. 1,2,3,4,5).")
 
 
     args = parser.parse_args()
@@ -950,6 +1101,8 @@ def main():
         handle_speak(args)
     elif args.command == "clone":
         handle_clone(args)
+    elif args.command == "verify":
+        handle_verify(args)
 
 if __name__ == "__main__":
     main()
