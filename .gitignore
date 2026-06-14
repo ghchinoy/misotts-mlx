@@ -15,7 +15,12 @@ outputs/
 .DS_Store
 
 # Reference Implementation (unmodified PyTorch baseline)
-sources/
+/sources/
 
 # Local Working Reports & Visual Drafts
 docs/reports/
+
+# Swift PM Build Artifacts
+miso_swift/.build/
+miso_swift/.swiftpm/
+miso_swift/DerivedData/
