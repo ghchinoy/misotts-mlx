@@ -45,6 +45,40 @@ misotts/ (Project Root)
 
 ---
 
+## 🚀 Unified Workspace Dashboard (Makefile)
+
+To streamline development across Python and Swift, this repository includes a top-level self-documenting `Makefile`. Instead of typing long command-line strings, you can use simple aliases to manage the entire workspace:
+
+| Target | Description | Key Variable Overrides |
+| :--- | :--- | :--- |
+| `make setup` | Sync Python virtual environment (`uv sync`) | N/A |
+| `make dry-run` | Rapid model path and token shape validation | N/A |
+| `make speak` | Synthesize high-fidelity speech locally on GPU (MLX) | `TEXT="..." SPEAKER=0` |
+| `make speak-ref` | Synthesize baseline speech on CPU (PyTorch) | `TEXT="..." SPEAKER=0` |
+| `make compare-audio` | Mathematically compare target and reference WAVs | `REF_WAV="..." TARGET_WAV="..."` |
+| `make build-swift` | Compile Swift-MLX load-verification CLI | N/A |
+| `make run-swift` | Run Swift-MLX weight load validation | N/A |
+| `make build-studio` | Build the premium macOS desktop SwiftUI app | N/A |
+| `make run-studio` | Build and run the macOS desktop SwiftUI app | N/A |
+| `make clean` | Remove python caches and clean both Swift packages | N/A |
+
+### Example Usage:
+```bash
+# Display the interactive help menu of targets
+make help
+
+# Run a rapid validation in milliseconds
+make dry-run
+
+# Synthesize a custom sentence on GPU
+make speak TEXT="Hello from my unified Makefile!" SPEAKER=2
+
+# Compile and launch the native macOS SwiftUI Studio App
+make run-studio
+```
+
+---
+
 ## End-to-End Walkthrough
 
 Follow this workflow to configure, run, quantize, and evaluate the MisoTTS model on macOS.
@@ -143,6 +177,18 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
 *   `--no-watermark`: Removes the SilentCipher watermark, which can eliminate background noise or artifacts.
 *   `--temp-start 0.7 --temp-min 0.4 --temp-decay-steps 30`: Decays the sampling temperature over 30 steps to prevent accumulation of sibilant noise.
 *   `--cfg-scale 2.0`: Increases the text-guidance conditioning scale, preventing the model from generating silence loops.
+
+
+### ⚠️ Model Generation Limits & Reading Speed Heuristic
+
+MisoTTS is an autoregressive transformer that generates audio frame-by-frame (with a frame rate of 12.5 steps per second). To prevent runaway generation and manage GPU/memory overhead, the local Python CLI and generator enforce a default safety limit of **10,000 milliseconds (10 seconds)** via the `--max_length_ms` parameter.
+
+* **How Truncation Happens**: The model generates speech until it naturally predicts a blank/zero **End of Sequence (EOS)** token indicating it has finished reading the text, or until it hits the hard `--max_length_ms` limit. If the model is still mid-word when it hits the limit, the loop is forcibly terminated, cutting off the speech abruptly.
+* **The Reading Speed Heuristic**: Standard English conversational speech averages **130 to 150 words per minute** (roughly **2 to 2.5 words per second**).
+  * Use this formula to estimate the minimum required limit: 
+    $$\text{Estimated Duration (seconds)} \approx \frac{\text{Word Count}}{2.2} + 2.0 \text{ (padding)}$$
+  * **Example (15 words)**: $\approx (15 / 2.2) + 2 = 8.8$ seconds. The default 10,000 ms (10s) limit is perfectly sufficient.
+  * **Example (100 words)**: $\approx (100 / 2.2) + 2 = 47.4$ seconds. You must increase `--max_length_ms` to `50000` (50 seconds) or more to avoid cutoffs.
 
 
 ### Step 9: Mathematical Parity Verification

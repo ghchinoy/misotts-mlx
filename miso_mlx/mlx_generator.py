@@ -275,13 +275,16 @@ class MLXGenerator:
         temp_decay_steps: Optional[int] = None,
         cfg_scale: float = 1.0,
         watermark_key: Optional[List[int]] = None,
+        is_json_mode: bool = False,
     ) -> mx.array:
         """
         The main MLX GPU-accelerated autoregressive speech synthesis loop.
         """
+        import json
         t_gen_start = time.perf_counter()
         
         use_cfg = cfg_scale != 1.0
+        log_file = sys.stderr if is_json_mode else sys.stdout
         
         # 1. Compile prompt context
         t_token_start = time.perf_counter()
@@ -351,7 +354,7 @@ class MLXGenerator:
         samples = []
         
         # 3. Step-by-step frame generation loop on GPU
-        print(f"[MLX] Starting frame generation loop (total {max_generation_len} steps)...", flush=True)
+        print(f"[MLX] Starting frame generation loop (total {max_generation_len} steps)...", file=log_file, flush=True)
         t_loop_start = time.perf_counter()
         first_step_time = 0.0
         subsequent_steps_time = 0.0
@@ -377,7 +380,16 @@ class MLXGenerator:
             # Print state details
             cfg_suffix = f" (CFG: {cfg_scale})" if use_cfg else ""
             temp_suffix = f" (Temp: {current_temp:.4f})" if (temp_start is not None and temp_min is not None) else ""
-            print(f"[MLX] Step {step+1}/{max_generation_len}{cfg_suffix}{temp_suffix} - Running compiled decoder frame...", end="", flush=True)
+            print(f"[MLX] Step {step+1}/{max_generation_len}{cfg_suffix}{temp_suffix} - Running compiled decoder frame...", end="", file=log_file, flush=True)
+            
+            if is_json_mode:
+                print(json.dumps({
+                    "type": "progress",
+                    "step": step + 1,
+                    "total_steps": max_generation_len,
+                    "cfg": cfg_scale if use_cfg else 1.0,
+                    "temp": float(current_temp)
+                }), file=sys.stdout, flush=True)
             
             # Convert scalar parameters to MLX arrays to avoid recompilation
             temp_mx = mx.array(current_temp, dtype=mx.float32)
@@ -396,7 +408,7 @@ class MLXGenerator:
                 )
             
             if mx.all(curr_sample == 0):
-                print(" [EOS] reached.", flush=True)
+                print(" [EOS] reached.", file=log_file, flush=True)
                 break
                 
             # Store the fully synthesized frame
@@ -408,7 +420,7 @@ class MLXGenerator:
             next_step_mask[0, -1] = False # Text token is missing/ignored
             
             # Forward pass through backbone for next step logits
-            print(" Done. Running backbone forward...", end="", flush=True)
+            print(" Done. Running backbone forward...", end="", file=log_file, flush=True)
             
             # Conditional step forward pass
             c0_logits_cond, last_h_cond, backbone_caches_cond, _ = self.model(
@@ -428,14 +440,14 @@ class MLXGenerator:
                 )
                 
                 # Force immediate evaluation of step results to prevent lazy graph compilation explosion
-                print(" Done. Force evaluating step...", end="", flush=True)
+                print(" Done. Force evaluating step...", end="", file=log_file, flush=True)
                 mx.eval(c0_logits_cond, last_h_cond, backbone_caches_cond, c0_logits_uncond, last_h_uncond, backbone_caches_uncond, curr_sample)
             else:
                 # Force immediate evaluation of step results to prevent lazy graph compilation explosion
-                print(" Done. Force evaluating step...", end="", flush=True)
+                print(" Done. Force evaluating step...", end="", file=log_file, flush=True)
                 mx.eval(c0_logits_cond, last_h_cond, backbone_caches_cond, curr_sample)
                 
-            print(" Step completed!", flush=True)
+            print(" Step completed!", file=log_file, flush=True)
             
             step_duration = time.perf_counter() - t_step_start
             if step == 0:
@@ -446,7 +458,7 @@ class MLXGenerator:
         generation_loop_time = time.perf_counter() - t_loop_start
         
         # 4. Reconstruct audio wave from predicted codebooks using real Mimi decoder
-        print(f"[MLX] Successfully generated {len(samples)} audio frames on GPU.")
+        print(f"[MLX] Successfully generated {len(samples)} audio frames on GPU.", file=log_file, flush=True)
         
         t_mimi_start = time.perf_counter()
         audio_output = None
@@ -457,7 +469,7 @@ class MLXGenerator:
             import torchaudio
             from watermarking import MISO_TTS_WATERMARK, watermark
             
-            print("[MLX] Reconstructing audio waveform using Mimi decoder...", end="", flush=True)
+            print("[MLX] Reconstructing audio waveform using Mimi decoder...", end="", file=log_file, flush=True)
             np_samples = [np.array(s) for s in samples]
             torch_samples = torch.from_numpy(np.stack(np_samples)).long() # (seq_len, 1, 32)
             
@@ -473,16 +485,16 @@ class MLXGenerator:
                 # Apply SilentCipher watermark if available and not bypassed
                 t_wm_start = time.perf_counter()
                 if not no_watermark and self.watermarker is not None:
-                    print(" Done.\n[MLX] Applying SilentCipher acoustic watermark...", end="", flush=True)
+                    print(f" Done.\n[MLX] Applying SilentCipher acoustic watermark...", end="", file=log_file, flush=True)
                     wm_key = watermark_key if watermark_key is not None else MISO_TTS_WATERMARK
                     audio, wm_sample_rate = watermark(self.watermarker, audio, self.sample_rate, wm_key)
                     audio = torchaudio.functional.resample(audio, orig_freq=wm_sample_rate, new_freq=self.sample_rate)
                 else:
                     if no_watermark:
-                        print(" Done.\n[MLX] Bypassing SilentCipher watermarker as requested.", end="", flush=True)
+                        print(f" Done.\n[MLX] Bypassing SilentCipher watermarker as requested.", end="", file=log_file, flush=True)
                 watermarking_time = time.perf_counter() - t_wm_start
                 
-            print(" Done.", flush=True)
+            print(" Done.", file=log_file, flush=True)
             audio_output = mx.array(audio.cpu().numpy(), dtype=mx.float32)
         else:
             # Returning dummy array in fallback mode

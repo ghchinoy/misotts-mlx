@@ -24,3 +24,6 @@ docs/reports/
 miso_swift/.build/
 miso_swift/.swiftpm/
 miso_swift/DerivedData/
+miso_studio/.build/
+miso_studio/.swiftpm/
+miso_studio/DerivedData/

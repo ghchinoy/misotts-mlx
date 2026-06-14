@@ -269,7 +269,7 @@ def handle_speak(args):
                 "temp_min": args.temp_min,
                 "temp_decay_steps": args.temp_decay_steps,
                 "cfg_scale": args.cfg_scale
-            }, indent=2))
+            }))
         return
 
     if args.mlx:
@@ -348,6 +348,7 @@ def handle_speak(args):
                     temp_decay_steps=args.temp_decay_steps,
                     cfg_scale=args.cfg_scale,
                     watermark_key=wm_key,
+                    is_json_mode=is_json_mode,
                 )
 
                 
@@ -416,7 +417,7 @@ def handle_speak(args):
                             "memory_increase_mb": max(0.0, mem_increase),
                             "profiling": stats
                         }
-                    }, indent=2))
+                    }))
                 return
             except Exception as e:
                 print_error(f"MLX Generator failed: {e}")
@@ -504,7 +505,7 @@ def handle_speak(args):
                         "peak_memory_mb": mem_after,
                         "memory_increase_mb": max(0.0, mem_increase)
                     }
-                }, indent=2))
+                }))
         except Exception as e:
             print_error(f"Synthesis failed: {e}")
             sys.exit(1)
@@ -619,7 +620,7 @@ def handle_clone(args):
                 "temp_min": args.temp_min,
                 "temp_decay_steps": args.temp_decay_steps,
                 "cfg_scale": args.cfg_scale
-            }, indent=2))
+            }))
         return
 
     if args.mlx:
@@ -721,6 +722,7 @@ def handle_clone(args):
                     temp_decay_steps=args.temp_decay_steps,
                     cfg_scale=args.cfg_scale,
                     watermark_key=wm_key,
+                    is_json_mode=is_json_mode,
                 )
 
                 
@@ -789,7 +791,7 @@ def handle_clone(args):
                             "memory_increase_mb": max(0.0, mem_increase),
                             "profiling": stats
                         }
-                    }, indent=2))
+                    }))
                 return
             except Exception as e:
                 print_error(f"MLX Generator Cloning failed: {e}")
@@ -858,7 +860,7 @@ def handle_clone(args):
                     "prompt_audio": str(prompt_audio_path.resolve()),
                     "output": str(output_path.resolve()),
                     "sample_rate": generator.sample_rate
-                }, indent=2))
+                }))
         except Exception as e:
             print_error(f"Cloning synthesis failed: {e}")
             sys.exit(1)
@@ -974,6 +976,7 @@ def main():
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser_optimize.add_argument("--json", action="store_true", help="Output results and status in machine-readable JSON format strictly on stdout.")
 
     # Subcommand: download
     parser_download = subparsers.add_parser(
@@ -988,6 +991,7 @@ def main():
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser_download.add_argument("--json", action="store_true", help="Output results and status in machine-readable JSON format strictly on stdout.")
 
     # Subcommand: speak
     parser_speak = subparsers.add_parser(
@@ -1020,6 +1024,7 @@ def main():
     parser_speak.add_argument("--temp-decay-steps", type=int, default=None, help="Number of steps over which temperature decays.")
     parser_speak.add_argument("--cfg-scale", type=float, default=1.0, help="Classifier-Free Guidance (CFG) scale (1.0 means disabled).")
     parser_speak.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key (e.g. 1,2,3,4,5).")
+    parser_speak.add_argument("--json", action="store_true", help="Output results and status in machine-readable JSON format strictly on stdout.")
 
 
     # Subcommand: clone
@@ -1067,6 +1072,7 @@ def main():
     parser_clone.add_argument("--temp-decay-steps", type=int, default=None, help="Number of steps over which temperature decays.")
     parser_clone.add_argument("--cfg-scale", type=float, default=1.0, help="Classifier-Free Guidance (CFG) scale (1.0 means disabled).")
     parser_clone.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key (e.g. 1,2,3,4,5).")
+    parser_clone.add_argument("--json", action="store_true", help="Output results and status in machine-readable JSON format strictly on stdout.")
 
 
     # Subcommand: verify
@@ -1084,6 +1090,7 @@ def main():
     )
     parser_verify.add_argument("--audio", "-a", type=str, required=True, help="Path to the WAV audio file to verify.")
     parser_verify.add_argument("--watermark-key", type=parse_watermark_key, default=None, help="Custom 5 comma-separated integers watermark key to verify (e.g. 1,2,3,4,5).")
+    parser_verify.add_argument("--json", action="store_true", help="Output results and status in machine-readable JSON format strictly on stdout.")
 
 
     args = parser.parse_args()

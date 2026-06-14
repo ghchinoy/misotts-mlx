@@ -120,3 +120,48 @@ By migrating to **MLX** (Apple's native machine learning framework), we bypass t
 1. **Full GPU Acceleration:** MLX runs natively on the Apple Silicon GPU using unified memory, eliminating the float64 issues of PyTorch.
 2. **Unified Memory Architecture:** MLX utilizes Apple Silicon's shared memory layout, allowing the 8.2B model weights to reside in memory without expensive PCIe transfers, delivering speeds of over **20+ frames per second** (more than 1.5x real-time generation speed).
 3. **Rust-backed Mimi Integration:** By using `moshi_mlx` and `rustymimi`, the audio tokenizer runs as an ultra-fast, pre-compiled Rust binary, providing instant audio encoding/decoding.
+
+---
+
+## 6. Autoregressive Safety Limits & Speaking Duration Heuristic
+
+### A. The Risk of Runaway Generation
+Because MisoTTS is an autoregressive transformer, it generates audio frame-by-frame (where 1 frame = 80ms of audio, running at a frame rate of 12.5 Hz). The model stops generating audio under one of two conditions:
+1. It naturally outputs an **End of Sequence (EOS)** token, predicting that the text prompt has been completely spoken.
+2. It hits a hard ceiling limit specified by the `--max_length_ms` parameter.
+
+In some cases (e.g., high generation temperatures, unusual punctuation, or subtle out-of-vocabulary terms), the model can enter a "runaway loop," generating infinite silence, background static, or repetitive sibilant vocalizations instead of predicting the EOS token. This wastes system memory, holds the GPU active, and drains the battery on mobile devices.
+
+### B. The Default Safety Ceiling
+To prevent this runaway behavior, both the local Python CLI and the core MLX speech generator enforce a default safety limit of **10,000 milliseconds (10 seconds)** via the `--max_length_ms` parameter.
+* If a short sentence is input, the model will naturally output EOS at 2–3 seconds, and generation will stop immediately (saving computation).
+* If a long paragraph is input, but the safety ceiling remains at 10 seconds, the model will be forcibly stopped at exactly 10 seconds, resulting in speech being cut off abruptly—sometimes mid-word.
+
+### C. The Speaking Duration Heuristic
+To prevent unexpected speech truncations, the application must approximate the expected audio length before starting inference. Standard English conversational speech averages **130 to 150 words per minute**, which translates to roughly **2.2 words per second**. 
+
+In addition to pure word articulation, natural human speech incorporates pauses for:
+* Capitalization, comma, and period punctuation.
+* Phrase boundary transitions and emotional intake of breath.
+* The baseline model JIT initialization and final decaying audio tail.
+
+To account for these natural pauses, the model uses the following **approximation heuristic**:
+
+$$\text{Estimated Speaking Duration (seconds)} \approx \frac{\text{Word Count}}{2.2} + 2.0 \text{ seconds (padding)}$$
+
+### D. Practical Examples of the Heuristic
+* **15-word sentence:**
+  $$\text{Est. Duration} = \frac{15}{2.2} + 2.0 = 8.8\text{ seconds}$$
+  Since $8.8\text{s} \le 10.0\text{s}$, the default safety ceiling is sufficient.
+* **100-word paragraph:**
+  $$\text{Est. Duration} = \frac{100}{2.2} + 2.0 = 47.4\text{ seconds}$$
+  Since $47.4\text{s} > 10.0\text{s}$, the default safety ceiling *will* cut off the speech. The user must increase `--max_length_ms` to `50000` (50s) or higher.
+
+### E. Native Interactive Safety in MisoTTS Studio
+To guarantee a premium user experience and prevent silent truncation failures:
+1. **Dynamic Parameter Control**: MisoTTS Studio includes a **Max Audio Duration Slider** in the settings side panel, allowing users to increase the safety ceiling up to 60.0s.
+2. **Real-time Heuristic Analyzer**: As the user types their text script, the app reactively splits the text to compute the exact word count and applies the speaking duration formula.
+3. **Smart Cutoff Warning**:
+   * If the estimated duration is within the active slider's limit, the app displays a subtle, reassuring pill: `Est. Speaking Time: ~X.Xs • Comfortably fits within your limit.`
+   * If the estimated speaking duration exceeds the current slider value, the app dynamically changes the card's styling to an orange caution alert: `⚠️ Warning: Exceeds slider limit (Y.Ys). Speech will cut off mid-word!`
+   * This guides the user to preemptively adjust the slider before hitting "Synthesize", eliminating frustrating trial-and-error synthesis runs.
