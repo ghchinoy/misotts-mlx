@@ -4,7 +4,7 @@ Welcome to **MisoTTS Studio**, a premium, state-of-the-art macOS SwiftUI applica
 
 Under the hood, the application acts as a high-performance frontend for the local MLX-adapted **MisoTTS 8B** model, communicating with the backend Python runtime over low-overhead processes while displaying rich telemetry and native audio playbacks.
 
----
+![MisoTTS Studio](https://github.com/user-attachments/assets/a7514620-37a3-4437-bcec-6eeeb96c97bc)
 
 ## ✨ Key Features
 
