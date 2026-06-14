@@ -29,7 +29,6 @@ Your reference file must meet these format requirements before feeding it into t
     *   Mismatch between text tokens and audio codes will break cross-attention weights, leading to immediate speech breakdown (muttering, stutters, or silence).
 *   **Natural Expressive Delivery**: Avoid recording in a flat, monotone voice. Speak with natural cadence, comfortable pacing, and clear punctuation. The model mirrors the exact energy and breath patterns of the prompt.
 
----
 
 ## 🛠️ Audio Preprocessing with FFmpeg
 
@@ -45,7 +44,6 @@ ffmpeg -i my_recording.m4a -ar 24000 -ac 1 -c:a pcm_s16le outputs/prepared_promp
 ffmpeg -i my_recording.wav -ss 00:00:00 -t 5 -ar 24000 -ac 1 -c:a pcm_s16le outputs/prepared_prompt_5s.wav
 ```
 
----
 
 ## 🚀 Voice Cloning CLI Workflows
 
@@ -93,7 +91,6 @@ uv run python miso_mlx/miso_mlx_cli.py clone \
   --output outputs/cloned_output_cpu.wav
 ```
 
----
 
 ## 📊 Local GPU Cloning Benchmarks
 
@@ -111,7 +108,6 @@ The following local empirical benchmarks compare the performance of full FP16 pr
 > [!NOTE]
 > *Wall Clock Time* includes initial JIT graph compilation and warmup passes, which only occur on the first run. Subsequent runs of the quantized model complete in under **20 seconds**!
 
----
 
 ## 🎛️ Acoustic Tuning & Hyperparameter Optimization
 
@@ -136,8 +132,6 @@ Control how strictly the model aligns with the input text versus the speaker's v
 
 ### 4. Bypassing Watermarking (`--no-watermark`)
 By default, MisoTTS applies a **SilentCipher** inaudible audio watermark to prevent malicious deepfakes. If you require absolute pure audiophile-grade outputs for testing, you can disable it with the `--no-watermark` tag.
-
----
 
 ## 🧪 Cross-Backend Parity Evaluation
 

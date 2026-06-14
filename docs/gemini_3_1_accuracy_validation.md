@@ -1,6 +1,6 @@
 # Gemini 3.1 Flash Lite Audio & Accuracy Validation Report
 **Date:** June 14, 2026  
-**Evaluation System:** Cloud-based Gemini 3.1 Flash Lite on Vertex AI (Region: `global`)  
+**Evaluation System:** Cloud-based Gemini 3.1 Flash Lite on Google Cloud AI (Region: `global`)  
 **Target Project:** MisoTTS Apple Silicon MLX Port  
 
 --- 
@@ -18,7 +18,6 @@ via **Gemini 3.1 Flash Lite** in the global region. This provides an objective, 
 | `test_dynamic_opt.wav` | "Hello from local GPU! this is highly variable speech." | "Hello from location, this is Wily ever will speed." | **75** | **30** |
 | `my_cloned_gpu.wav` | "Let's test our local voice cloning on the GPU backend of Apple Silicon." | "Let's test our local voice cloning on the GPU backend of Apple Silicon." | **98** | **100** |
 
---- 
 
 ## 🔍 Deep-Dive Diagnostic Assessments
 
@@ -46,7 +45,6 @@ The model successfully articulated the entire sentence without cutting off prema
 *   **Actual:** "Hello, this is synthesized locally on my Mac using a UI and i focus ball, Davis."
 *   **Observations:** The model failed significantly to identify the phrase "our unified workspace," hallucinating "a UI and i focus ball, Davis" instead.
 
----
 
 ### Final Assessment
 The TTS system displays good acoustic clarity, but the linguistic accuracy for the specific input text is poor, particularly with technical terms. The speech pattern remains distinctly robotic, lacking fluid naturalness.
@@ -54,7 +52,6 @@ The TTS system displays good acoustic clarity, but the linguistic accuracy for t
 *   **Speech Quality Score:** 75/100
 *   **Alignment Accuracy:** 30/100
 
----
 
 ### 🎙️ File: `hello_miso_gpu.wav`
 **Expected Reference:** "Hello! This is synthesized locally on my Mac using our unified workspace."  
@@ -88,7 +85,6 @@ The TTS engine produces a clean, professional-sounding voice with good pacing. H
 *   **Speech Quality Score:** 92/100
 *   **Alignment Accuracy:** 85/100
 
----
 
 ### 🎙️ File: `test_dynamic_opt.wav`
 **Expected Reference:** "Hello from local GPU! this is highly variable speech."  
@@ -153,7 +149,6 @@ This is a high-performance TTS implementation. The synthesis quality is remarkab
 *   **Speech Quality Score**: 98/100
 *   **Alignment Accuracy**: 100/100
 
----
 
 
 ## 📈 Key Findings & Insights

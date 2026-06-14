@@ -99,5 +99,5 @@ To rerun the comparative evaluation locally:
 
 ## 🔮 Recommendations & Next Steps
 
-1.  **Adopt Gemma 4 for Offline Evaluations:** Since local Gemma 4 matches Gemini transcription exactly, it should be adopted as the default, zero-cost, fully offline evaluation checker for MisoTTS. This bypasses the Vertex AI GCP 404 access restrictions and provides immediate local latency feedback.
+1.  **Adopt Gemma 4 for Offline Evaluations:** Since local Gemma 4 matches Gemini transcription exactly, it should be adopted as the default, zero-cost, fully offline evaluation checker for MisoTTS. This bypasses the Google Cloud AI GCP 404 access restrictions and provides immediate local latency feedback.
 2.  **Optimize Speech Vocoder Cadence:** To resolve the phonetic drift (`"synthesized locally"` sounding like `"someone quickly"`), developers should tweak the MisoTTS generator's temperature and nucleus/top-k sampling parameters in `mlx_generator.py` to stabilize enunciation during fast steps.

@@ -2,7 +2,7 @@
 
 This guide describes how to configure, run, and utilize the unquantized **Gemma 4** model locally on macOS for **100% offline, private, and zero-cost speech and visual validation** of our MisoTTS MLX outputs.
 
-Using local Gemma 4 via Apple's native **MLX GPU** framework provides a high-speed, secure alternative to cloud APIs (such as Vertex AI Gemini) with zero network latency or API fee overhead.
+Using local Gemma 4 via Apple's native **MLX GPU** framework provides a high-speed, secure alternative to cloud APIs (such as Google Cloud AI Gemini) with zero network latency or API fee overhead.
 
 ---
 
@@ -18,7 +18,6 @@ Local validation utilizes `mlx-vlm` (MLX Vision-Language Model framework) to str
    - `transformers`
    - `Pillow` (for test-image synthesis)
 
----
 
 ## ⚙️ Step-by-Step Installation
 
@@ -36,7 +35,6 @@ source .venv_gemma/bin/activate
 uv pip install mlx-vlm transformers Pillow
 ```
 
----
 
 ### 2️⃣ Step 2: Download or Locate Gemma 4 Weights
 Place your unquantized local Gemma 4 weights in a local model directory. 
@@ -49,7 +47,6 @@ If you are pulling weights directly from Hugging Face for the first time, you ca
 model_path = "google/gemma-4-2b-it"
 ```
 
----
 
 ### 3️⃣ Step 3: Run the Local Gemma 4 Validation Pipeline
 
@@ -67,7 +64,6 @@ This script will:
 2. Execute **Part 1 (Interleaved Multimodal Run):** Interleave the test image and a target Elvish pronunciation recording, prompt the model to describe the image and transcribe the audio, and print the joint response.
 3. Execute **Part 2 (Audio-only Transcription Run):** Stream the synthesized MisoTTS WAV file `outputs/hello_miso_gpu.wav` and output its offline transcription.
 
----
 
 ## 💡 Best Practices for Interleaved Prompts
 
@@ -93,7 +89,6 @@ To guarantee robust multi-sensor processing, always wrap your placeholder tokens
 > ```
 > Adding these simple textual breaks lets the model's self-attention layers cleanly partition and decode separate modality token registers.
 
----
 
 ## 📊 Gemma 4 Offline Metrics & Telemetry
 
