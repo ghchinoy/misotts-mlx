@@ -88,3 +88,24 @@ uv run python miso_mlx/miso_mlx_cli.py speak \
 *   `--no-watermark`: Bypasses the SilentCipher 44.1 kHz acoustic watermarking pass to eliminate trailing whirring/background hum.
 *   `--temp-start 0.7 --temp-min 0.4 --temp-decay-steps 30`: Smoothly decays entropy over 30 steps to prevent the accumulation of sibilant noise towards the tail of the sentence.
 *   `--cfg-scale 2.0`: Increases text-guidance conditioning scale to prevent the model from generating silence loops.
+*   `--max_length_ms <duration>`: Controls the hard autoregressive frame generation ceiling (defaults to `10000` / 10 seconds). For long text scripts, this parameter must be increased to prevent mid-word cutoff.
+
+---
+
+## ⏱️ Speech Duration & Safety Ceiling Heuristic
+
+Because MisoTTS is an autoregressive transformer, it generates audio frame-by-frame. To prevent runaway generation, both the CLI and generator enforce a default safety limit of **10 seconds** (`--max_length_ms 10000`).
+
+To avoid premature speech truncation, follow the human conversational speech approximation heuristic before choosing your `--max_length_ms` limit:
+
+$$\text{Estimated Speaking Duration (seconds)} \approx \frac{\text{Word Count}}{2.2} + 2.0\text{ (padding for punctuation/JIT)}$$
+
+### Quick Lookup & Selection Table:
+| Word Count | Est. Speaking Time | Recommended `--max_length_ms` |
+|:---|:---|:---|
+| 1 - 15 words | ~3.0s - 8.8s | `10000` (Default 10s) |
+| 16 - 30 words | ~8.9s - 15.6s | `20000` (20s) |
+| 31 - 50 words | ~15.7s - 24.7s | `30000` (30s) |
+| 51 - 100 words | ~24.8s - 47.4s | `50000` to `60000` (50s - 60s) |
+
+*Always align your safety ceiling parameter (`--max_length_ms`) generously with the expected speaking duration to prevent frustrating mid-phrase cutoffs.*
