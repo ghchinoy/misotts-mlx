@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var cfgScale: Double = 2.00
     @State private var bypassWatermark: Bool = false
     @State private var useQuant: Bool = true
+    @State private var useMLX: Bool = true
     @State private var maxAudioLengthSec: Double = 15.0
     
     // Voice Cloning
@@ -187,10 +188,17 @@ struct ContentView: View {
                             .font(.headline)
                         
                         // Toggle Group
-                        HStack(spacing: 20) {
-                            Toggle("4-bit Quantized", isOn: $useQuant)
-                                .toggleStyle(.checkbox)
-                                .help("Saves 10GB RAM and speeds up synthesis up to 3.8x using 4-bit local weights.")
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 20) {
+                                Toggle("Metal MLX GPU", isOn: $useMLX)
+                                    .toggleStyle(.checkbox)
+                                    .help("Enables high-speed Apple Silicon GPU (Metal) speech generation. If off, falls back to PyTorch CPU reference baseline.")
+                                
+                                Toggle("4-bit Quantized", isOn: $useQuant)
+                                    .toggleStyle(.checkbox)
+                                    .disabled(!useMLX)
+                                    .help("Saves 10GB RAM and speeds up synthesis up to 3.8x using 4-bit local weights. (MLX only)")
+                            }
                             
                             Toggle("Bypass Watermark", isOn: $bypassWatermark)
                                 .toggleStyle(.checkbox)
@@ -289,12 +297,13 @@ struct ContentView: View {
                                 cfgScale: cfgScale,
                                 bypassWatermark: bypassWatermark,
                                 useQuant: useQuant,
-                                maxLengthMs: maxAudioLengthSec * 1000.0
+                                maxLengthMs: maxAudioLengthSec * 1000.0,
+                                useMLX: useMLX
                             )
                         }) {
                             HStack {
-                                Image(systemName: "waveform")
-                                Text("Synthesize Speech (Metal GPU)")
+                                Image(systemName: useMLX ? "waveform" : "waveform.circle")
+                                Text(useMLX ? "Synthesize Speech (Metal GPU)" : "Synthesize Speech (PyTorch CPU)")
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -615,7 +624,8 @@ struct ContentView: View {
                     cfgScale: cfgScale,
                     bypassWatermark: bypassWatermark,
                     useQuant: useQuant,
-                    maxLengthMs: maxAudioLengthSec * 1000.0
+                    maxLengthMs: maxAudioLengthSec * 1000.0,
+                    useMLX: useMLX
                 )
             }
         }
@@ -660,6 +670,7 @@ struct ContentView: View {
         cfgScale = 2.00
         bypassWatermark = false
         useQuant = true
+        useMLX = true
         maxAudioLengthSec = 15.0
         isCloningMode = false
         cloneAudioPath = ""

@@ -104,7 +104,8 @@ class MisoSynthesisWorker: ObservableObject {
         cfgScale: Double,
         bypassWatermark: Bool,
         useQuant: Bool,
-        maxLengthMs: Double = 15000.0
+        maxLengthMs: Double = 15000.0,
+        useMLX: Bool = true
     ) {
         cancelActiveTask()
         appState = .running
@@ -143,9 +144,10 @@ class MisoSynthesisWorker: ObservableObject {
         let timestamp = formatter.string(from: Date())
         
         let detailSuffix = isClone ? "clone" : "spk\(speaker)"
+        let backendSuffix = useMLX ? "mlx" : "pt"
         let paramsStr = "t\(String(format: "%.1f", tempStart))_cfg\(String(format: "%.1f", cfgScale))"
         let slug = makeSlug(from: text)
-        let uniqueFilename = "miso_\(timestamp)_\(detailSuffix)_\(paramsStr)\(slug.isEmpty ? "" : "_\(slug)").wav"
+        let uniqueFilename = "miso_\(timestamp)_\(detailSuffix)_\(backendSuffix)_\(paramsStr)\(slug.isEmpty ? "" : "_\(slug)").wav"
         
         let outputsDir = projectRoot.appendingPathComponent("outputs")
         
@@ -180,7 +182,9 @@ class MisoSynthesisWorker: ObservableObject {
         }
         
         // MLX execution backend
-        args.append("--mlx")
+        if useMLX {
+            args.append("--mlx")
+        }
         
         // Quantization checkpoint
         if useQuant {
